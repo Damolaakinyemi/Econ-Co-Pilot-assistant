@@ -1,0 +1,904 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Econ Research Co-Pilot</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Lora:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+<script src="">https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js">
+<script src="">https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js">
+<script src="">https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js">
+<script src="">https://cdn.jsdelivr.net/npm/mathjs@12.2.1/lib/browser/math.min.js">
+<script src="">https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js">
+<script src="">https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js">
+<style>
+:root{
+  --navy:#0a2540; --navy-2:#13345e; --emerald:#10b981; --emerald-2:#34d399;
+  --bg:#f5f7fb; --card:#ffffff; --text:#0f172a; --muted:#64748b; --border:#e2e8f0;
+  --danger:#ef4444; --warn:#f59e0b;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;font-family:'Inter',system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--text);}
+a{color:inherit}
+.app{display:flex;min-height:100vh}
+.sidebar{width:240px;background:linear-gradient(180deg,var(--navy) 0%,#06192e 100%);color:#fff;padding:24px 16px;position:sticky;top:0;height:100vh;flex-shrink:0;box-shadow:2px 0 12px rgba(0,0,0,.06)}
+.brand{font-size:18px;font-weight:700;display:flex;align-items:center;gap:10px;margin-bottom:32px}
+.brand-emoji{font-size:22px}
+.nav-item{display:flex;align-items:center;gap:10px;padding:11px 14px;border-radius:10px;color:#cbd5e1;cursor:pointer;margin-bottom:4px;font-size:14px;font-weight:500;transition:all .18s}
+.nav-item:hover{background:rgba(255,255,255,.06);color:#fff}
+.nav-item.active{background:linear-gradient(90deg,var(--emerald) 0%,#0ea371 100%);color:#fff;box-shadow:0 4px 12px rgba(16,185,129,.3)}
+.nav-icon{font-size:16px;width:20px;text-align:center}
+.sidebar-foot{position:absolute;bottom:20px;left:16px;right:16px;font-size:11px;color:#64748b;border-top:1px solid rgba(255,255,255,.08);padding-top:12px}
+.main{flex:1;padding:0;overflow-x:hidden}
+.hero{background:linear-gradient(135deg,var(--navy) 0%,#13345e 50%,var(--emerald) 140%);color:#fff;padding:36px 40px;display:flex;justify-content:space-between;align-items:center}
+.hero h1{margin:0;font-size:26px;font-weight:700;letter-spacing:-.5px}
+.hero p{margin:6px 0 0;font-size:14px;color:#cbe7df}
+.hero-badge{background:rgba(255,255,255,.12);padding:6px 12px;border-radius:999px;font-size:12px;backdrop-filter:blur(8px)}
+.container{padding:28px 40px;max-width:1300px}
+.section{display:none;animation:fade .25s ease}
+.section.active{display:block}
+@keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+.card{background:var(--card);border-radius:14px;padding:24px;box-shadow:0 1px 3px rgba(15,23,42,.04),0 4px 16px rgba(15,23,42,.04);border:1px solid var(--border);margin-bottom:20px}
+.card h2{margin:0 0 4px;font-size:18px;font-weight:600}
+.card .sub{color:var(--muted);font-size:13px;margin-bottom:18px}
+.row{display:flex;gap:16px;flex-wrap:wrap}
+.col{flex:1;min-width:220px}
+label{display:block;font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+select,input[type=text]{width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:14px;background:#fff;transition:border .15s}
+select:focus,input:focus{outline:none;border-color:var(--emerald);box-shadow:0 0 0 3px rgba(16,185,129,.12)}
+select[multiple]{min-height:120px}
+.btn{display:inline-flex;align-items:center;gap:8px;padding:10px 18px;background:var(--navy);color:#fff;border:none;border-radius:8px;font-family:inherit;font-size:14px;font-weight:600;cursor:pointer;transition:all .15s}
+.btn:hover{background:var(--navy-2);transform:translateY(-1px);box-shadow:0 6px 14px rgba(10,37,64,.18)}
+.btn:disabled{opacity:.5;cursor:not-allowed;transform:none}
+.btn-emerald{background:var(--emerald)}
+.btn-emerald:hover{background:#0ea371}
+.btn-ghost{background:transparent;color:var(--navy);border:1px solid var(--border)}
+.btn-ghost:hover{background:#f1f5f9}
+.dropzone{border:2px dashed #94a3b8;border-radius:14px;padding:48px 24px;text-align:center;background:#fafbfd;transition:all .2s;cursor:pointer}
+.dropzone:hover,.dropzone.drag{border-color:var(--emerald);background:#ecfdf5}
+.dropzone .icon{font-size:42px;margin-bottom:10px}
+.dropzone h3{margin:0 0 6px;font-size:16px}
+.dropzone p{margin:0;color:var(--muted);font-size:13px}
+table.data{width:100%;border-collapse:collapse;font-size:13px}
+table.data th,table.data td{padding:9px 12px;text-align:left;border-bottom:1px solid var(--border)}
+table.data th{background:#f8fafc;font-weight:600;color:var(--navy);position:sticky;top:0}
+table.data tr:hover{background:#f8fafc}
+.scroll{overflow:auto;max-height:420px;border:1px solid var(--border);border-radius:10px}
+.tag{display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:600}
+.tag.num{background:#dbeafe;color:#1e40af}
+.tag.cat{background:#fef3c7;color:#92400e}
+.tag.date{background:#ede9fe;color:#5b21b6}
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;margin-top:8px}
+.stat{background:#f8fafc;border:1px solid var(--border);border-radius:10px;padding:12px 14px}
+.stat .k{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+.stat .v{font-size:18px;font-weight:700;color:var(--navy);margin-top:2px}
+.toast{position:fixed;bottom:20px;right:20px;background:var(--navy);color:#fff;padding:12px 18px;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.18);z-index:999;font-size:14px;animation:fade .2s}
+.toast.err{background:var(--danger)}
+.toast.ok{background:var(--emerald)}
+.spinner{width:18px;height:18px;border:2.5px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .8s linear infinite;display:inline-block}
+@keyframes spin{to{transform:rotate(360deg)}}
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--border);margin-bottom:16px}
+.tab{padding:10px 18px;cursor:pointer;font-size:14px;font-weight:600;color:var(--muted);border-bottom:2px solid transparent;transition:all .15s}
+.tab:hover{color:var(--navy)}
+.tab.active{color:var(--navy);border-color:var(--emerald)}
+.tab-panel{display:none}
+.tab-panel.active{display:block;animation:fade .2s}
+/* Regression results */
+.reg-table{width:100%;border-collapse:collapse;font-family:'JetBrains Mono','Menlo',monospace;font-size:13px;margin-top:14px}
+.reg-table th,.reg-table td{padding:8px 12px;border-bottom:1px solid var(--border);text-align:right}
+.reg-table th:first-child,.reg-table td:first-child{text-align:left;font-weight:600}
+.reg-table thead th{background:var(--navy);color:#fff;border-bottom:none}
+.reg-table tfoot td{background:#f8fafc;font-weight:600}
+.reg-summary{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;margin-top:14px}
+.reg-summary .item{background:linear-gradient(135deg,#f8fafc,#eef2f7);padding:10px 14px;border-radius:10px;border:1px solid var(--border)}
+.reg-summary .item .k{font-size:11px;color:var(--muted);text-transform:uppercase}
+.reg-summary .item .v{font-size:16px;font-weight:700;color:var(--navy)}
+.sig{color:var(--emerald);font-weight:700}
+.legend{font-size:12px;color:var(--muted);margin-top:10px;font-style:italic}
+/* Report */
+.report-wrap{background:#fff;padding:48px 56px;border:1px solid var(--border);border-radius:14px;font-family:'Lora',Georgia,serif;color:#1f2937;line-height:1.75;max-width:820px;margin:0 auto}
+.report-wrap h1.title{font-size:24px;text-align:center;font-weight:600;margin:0 0 4px;line-height:1.3}
+.report-wrap .authors{text-align:center;font-style:italic;font-size:14px;color:var(--muted);margin-bottom:30px}
+.report-wrap h2.sec{font-size:16px;font-weight:600;margin:28px 0 10px;color:var(--navy);border-bottom:1px solid var(--border);padding-bottom:4px}
+.report-wrap p{text-align:justify;margin:10px 0;font-size:14.5px}
+.report-wrap .abstract{font-size:13.5px;background:#f8fafc;padding:16px 20px;border-left:3px solid var(--emerald);border-radius:6px;margin:18px 0}
+.report-wrap .eq{text-align:center;font-style:italic;font-size:15px;margin:14px 0;padding:8px;background:#fafbfd;border-radius:6px}
+.report-wrap table{width:100%;border-collapse:collapse;font-family:'Inter',sans-serif;font-size:12px;margin:12px 0}
+.report-wrap table th,.report-wrap table td{padding:6px 10px;border-bottom:1px solid #cbd5e1;text-align:right}
+.report-wrap table th:first-child,.report-wrap table td:first-child{text-align:left}
+.report-wrap table thead th{border-bottom:2px solid #0f172a;background:transparent;color:#0f172a;font-weight:700}
+.report-wrap .refs{font-size:13px}
+.report-wrap .refs p{padding-left:22px;text-indent:-22px}
+.heatmap-wrap{display:flex;justify-content:center;padding:14px}
+.tooltip{cursor:help;border-bottom:1px dotted var(--muted)}
+.actions-bar{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}
+.empty{text-align:center;color:var(--muted);padding:32px;font-size:14px}
+.kbd{font-family:monospace;background:#eef2f7;padding:1px 6px;border-radius:4px;font-size:12px}
+@media (max-width:880px){.sidebar{display:none}.container{padding:18px}.hero{padding:24px}}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand"><span class="brand-emoji">📊</span> Econ Co-Pilot</div>
+    <div class="nav-item active" data-section="dashboard"><span class="nav-icon">📂</span> Data</div>
+    <div class="nav-item" data-section="viz"><span class="nav-icon">📈</span> Visualizations</div>
+    <div class="nav-item" data-section="reg"><span class="nav-icon">🧮</span> Regression Lab</div>
+    <div class="nav-item" data-section="interp"><span class="nav-icon">🤖</span> AI Interpretation</div>
+    <div class="nav-item" data-section="report"><span class="nav-icon">📄</span> Report Generator</div>
+    <div class="sidebar-foot">v1.0 · Client-side · No data leaves your browser</div>
+  </aside>
+
+  <main class="main">
+    <div class="hero">
+      <div>
+        <h1>Econ Research Co-Pilot</h1>
+        <p>Bridging Excel and Stata — AI-powered econometrics for everyone.</p>
+      </div>
+      <span class="hero-badge" id="data-status">No dataset loaded</span>
+    </div>
+
+    <div class="container">
+
+      <!-- DASHBOARD / UPLOAD -->
+      <div class="section active" id="sec-dashboard">
+        <div class="card">
+          <h2>Upload Your Dataset</h2>
+          <div class="sub">CSV or Excel (.xlsx, .xls). Everything is processed locally in your browser.</div>
+          <div class="dropzone" id="drop">
+            <div class="icon">📥</div>
+            <h3>Drag & drop a file here</h3>
+            <p>or <span style="color:var(--emerald);font-weight:600;cursor:pointer" onclick="document.getElementById('file-in').click()">browse files</span></p>
+            <input type="file" id="file-in" accept=".csv,.xlsx,.xls" style="display:none" />
+          </div>
+          <div class="actions-bar">
+            <button class="btn btn-emerald" onclick="loadSample()">✨ Load Sample Data</button>
+            <button class="btn btn-ghost" onclick="resetAll()">Clear</button>
+          </div>
+        </div>
+
+        <div class="card" id="preview-card" style="display:none">
+          <h2>Dataset Preview</h2>
+          <div class="sub" id="dataset-info">—</div>
+          <div class="scroll"><table class="data" id="preview-table"></table></div>
+        </div>
+
+        <div class="card" id="stats-card" style="display:none">
+          <h2>Summary Statistics</h2>
+          <div class="sub">Descriptive statistics for numeric columns.</div>
+          <div class="scroll"><table class="data" id="stats-table"></table></div>
+        </div>
+      </div>
+
+      <!-- VISUALIZATIONS -->
+      <div class="section" id="sec-viz">
+        <div class="card">
+          <h2>Visualization Studio</h2>
+          <div class="sub">Explore relationships and distributions in your data.</div>
+          <div class="row">
+            <div class="col"><label>Chart Type</label>
+              <select id="chart-type">
+                <option value="line">Line Chart</option>
+                <option value="bar">Bar Chart</option>
+                <option value="scatter">Scatter + Regression Line</option>
+                <option value="hist">Histogram</option>
+                <option value="heatmap">Correlation Heatmap</option>
+              </select>
+            </div>
+            <div class="col"><label>X Variable</label><select id="x-var"></select></div>
+            <div class="col"><label>Y Variable</label><select id="y-var"></select></div>
+          </div>
+          <div class="actions-bar"><button class="btn" onclick="renderChart()">📊 Generate Chart</button></div>
+        </div>
+        <div class="card">
+          <div id="chart-container" style="position:relative;height:460px"><div class="empty">Choose options and click <em>Generate Chart</em>.</div></div>
+          <div class="heatmap-wrap" id="heatmap-host" style="display:none"></div>
+        </div>
+      </div>
+
+      <!-- REGRESSION LAB -->
+      <div class="section" id="sec-reg">
+        <div class="card">
+          <h2>OLS Regression Lab</h2>
+          <div class="sub">Ordinary Least Squares estimated with <span class="tooltip" title="β = (X'X)⁻¹ X'y">closed-form matrix algebra</span>.</div>
+          <div class="row">
+            <div class="col" style="max-width:320px"><label>Dependent (Y)</label><select id="reg-y"></select></div>
+            <div class="col"><label>Independent (X) — Ctrl/Cmd-click for multiple</label><select id="reg-x" multiple></select></div>
+          </div>
+          <div class="actions-bar">
+            <button class="btn" onclick="runRegression()"><span id="reg-spin" style="display:none" class="spinner"></span> 🧮 Run Regression</button>
+          </div>
+        </div>
+        <div class="card" id="reg-results-card" style="display:none">
+          <h2>Estimation Results</h2>
+          <div class="sub" id="reg-spec">—</div>
+          <div id="reg-table-host"></div>
+          <div class="reg-summary" id="reg-summary"></div>
+          <div class="legend">Significance levels: *** p&lt;0.01 &nbsp;·&nbsp; ** p&lt;0.05 &nbsp;·&nbsp; * p&lt;0.10</div>
+        </div>
+      </div>
+
+      <!-- INTERPRETATION -->
+      <div class="section" id="sec-interp">
+        <div class="card">
+          <h2>AI-Powered Interpretation</h2>
+          <div class="sub">Plain-language explanations grounded only in the computed statistics — no hallucinations.</div>
+          <div class="tabs">
+            <div class="tab active" data-tab="student">🎓 Student-friendly</div>
+            <div class="tab" data-tab="academic">📚 Academic</div>
+          </div>
+          <div class="tab-panel active" id="tab-student"><div class="empty">Run a regression first to generate an interpretation.</div></div>
+          <div class="tab-panel" id="tab-academic"><div class="empty">Run a regression first to generate an interpretation.</div></div>
+        </div>
+      </div>
+
+      <!-- REPORT -->
+      <div class="section" id="sec-report">
+        <div class="card">
+          <h2>Automated Research Paper</h2>
+          <div class="sub">Turns your regression into a full publication-quality paper.</div>
+          <div class="actions-bar">
+            <button class="btn btn-emerald" onclick="generateReport()">📝 Generate Report</button>
+            <button class="btn btn-ghost" onclick="exportPDF()">⬇️ Export PDF</button>
+          </div>
+        </div>
+        <div id="report-host"><div class="empty card">No report yet. Run a regression and click <em>Generate Report</em>.</div></div>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<script>
+/* =========================================================
+   STATE
+   ========================================================= */
+const state = {
+  rows: [],            // array of objects
+  cols: [],            // [{name, type, values}]
+  numericCols: [],
+  lastReg: null,
+  chart: null
+};
+
+/* =========================================================
+   NAV
+   ========================================================= */
+document.querySelectorAll('.nav-item').forEach(n=>{
+  n.onclick = ()=>{
+    document.querySelectorAll('.nav-item').forEach(x=>x.classList.remove('active'));
+    n.classList.add('active');
+    const s = n.dataset.section;
+    document.querySelectorAll('.section').forEach(x=>x.classList.remove('active'));
+    document.getElementById('sec-'+s).classList.add('active');
+  };
+});
+document.querySelectorAll('.tab').forEach(t=>{
+  t.onclick = ()=>{
+    document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+    t.classList.add('active');
+    document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+    document.getElementById('tab-'+t.dataset.tab).classList.add('active');
+  };
+});
+
+/* =========================================================
+   TOAST
+   ========================================================= */
+function toast(msg, kind='ok'){
+  const t = document.createElement('div');
+  t.className = 'toast '+kind;
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(()=>t.remove(), 2800);
+}
+
+/* =========================================================
+   UPLOAD
+   ========================================================= */
+const drop = document.getElementById('drop');
+const fileIn = document.getElementById('file-in');
+['dragover','dragenter'].forEach(e=>drop.addEventListener(e,ev=>{ev.preventDefault();drop.classList.add('drag');}));
+['dragleave','drop'].forEach(e=>drop.addEventListener(e,ev=>{ev.preventDefault();drop.classList.remove('drag');}));
+drop.addEventListener('drop', ev=>{ const f = ev.dataTransfer.files[0]; if(f) handleFile(f); });
+fileIn.addEventListener('change', ev=>{ const f=ev.target.files[0]; if(f) handleFile(f);});
+
+function handleFile(file){
+  const ext = file.name.split('.').pop().toLowerCase();
+  if(ext === 'csv'){
+    Papa.parse(file, {header:true, skipEmptyLines:true, dynamicTyping:true,
+      complete: res => loadData(res.data),
+      error: err => toast('Parse error: '+err.message,'err') });
+  } else if(['xlsx','xls'].includes(ext)){
+    const r = new FileReader();
+    r.onload = e => {
+      try{
+        const wb = XLSX.read(e.target.result,{type:'array'});
+        const sh = wb.Sheets[wb.SheetNames[0]];
+        const rows = XLSX.utils.sheet_to_json(sh,{defval:null});
+        loadData(rows);
+      }catch(err){ toast('Excel error: '+err.message,'err'); }
+    };
+    r.readAsArrayBuffer(file);
+  } else toast('Unsupported file type','err');
+}
+
+/* =========================================================
+   SAMPLE DATA
+   ========================================================= */
+function loadSample(){
+  const rows = [];
+  let prevGDP = 2.5;
+  for(let i=0;i<50;i++){
+    const year = 1975+i;
+    const gdp = +(2.5 + 0.4*Math.sin(i/4) + (Math.random()-.5)*1.6).toFixed(2);
+    const infl = +(3 + 0.35*gdp + (Math.random()-.5)*1.4).toFixed(2);
+    const unemp = +(6.2 - 0.55*gdp + (Math.random()-.5)*0.9).toFixed(2);
+    const rate = +(1.8 + 0.7*infl + (Math.random()-.5)*0.8).toFixed(2);
+    const inv = +(14 + 1.4*gdp - 0.6*rate + (Math.random()-.5)*1.2).toFixed(2);
+    rows.push({Year:year, GDP_Growth:gdp, Inflation:infl, Unemployment:unemp, Interest_Rate:rate, Investment:inv});
+    prevGDP = gdp;
+  }
+  loadData(rows);
+  toast('Sample macroeconomic dataset loaded (50 obs).','ok');
+}
+
+/* =========================================================
+   DATA LOADING & TYPE INFERENCE
+   ========================================================= */
+function loadData(rows){
+  if(!rows || !rows.length){ toast('Empty file','err'); return; }
+  state.rows = rows;
+  const colNames = Object.keys(rows[0]);
+  state.cols = colNames.map(name=>{
+    const values = rows.map(r=>r[name]);
+    let numCount=0, dateCount=0, total=0;
+    values.forEach(v=>{
+      if(v===null||v===''||v===undefined) return;
+      total++;
+      if(typeof v==='number' || (!isNaN(parseFloat(v)) && isFinite(v))) numCount++;
+      else if(!isNaN(Date.parse(v))) dateCount++;
+    });
+    let type='categorical';
+    if(numCount/Math.max(total,1) > 0.8) type='numeric';
+    else if(dateCount/Math.max(total,1) > 0.8) type='datetime';
+    return {name, type, values};
+  });
+  state.numericCols = state.cols.filter(c=>c.type==='numeric').map(c=>c.name);
+
+  document.getElementById('data-status').textContent =
+    `${rows.length} rows · ${state.cols.length} cols`;
+  renderPreview(); renderStats(); populateSelectors();
+  toast('Dataset loaded.','ok');
+}
+
+function renderPreview(){
+  const card = document.getElementById('preview-card');
+  const t = document.getElementById('preview-table');
+  const info = document.getElementById('dataset-info');
+  info.innerHTML = `<b>${state.rows.length}</b> rows × <b>${state.cols.length}</b> columns. Showing first 20.`;
+  let head = '<thead><tr>'+state.cols.map(c=>{
+    const tag = `<span class="tag ${c.type==='numeric'?'num':c.type==='datetime'?'date':'cat'}">${c.type}</span>`;
+    return `<th>${c.name}<br>${tag}</th>`;
+  }).join('')+'</tr></thead>';
+  let body = '<tbody>';
+  state.rows.slice(0,20).forEach(r=>{
+    body += '<tr>'+state.cols.map(c=>`<td>${fmt(r[c.name])}</td>`).join('')+'</tr>';
+  });
+  body+='</tbody>';
+  t.innerHTML = head+body;
+  card.style.display='block';
+}
+
+function renderStats(){
+  const card = document.getElementById('stats-card');
+  const t = document.getElementById('stats-table');
+  const num = state.cols.filter(c=>c.type==='numeric');
+  if(!num.length){ card.style.display='none'; return; }
+  let html = '<thead><tr><th>Variable</th><th>N</th><th>Mean</th><th>Std</th><th>Min</th><th>Median</th><th>Max</th><th>Missing</th></tr></thead><tbody>';
+  num.forEach(c=>{
+    const vals = c.values.map(v=>parseFloat(v)).filter(v=>!isNaN(v));
+    const missing = c.values.length - vals.length;
+    const s = describe(vals);
+    html += `<tr><td><b>${c.name}</b></td><td>${vals.length}</td><td>${s.mean.toFixed(3)}</td><td>${s.std.toFixed(3)}</td><td>${s.min.toFixed(3)}</td><td>${s.median.toFixed(3)}</td><td>${s.max.toFixed(3)}</td><td>${missing}</td></tr>`;
+  });
+  html+='</tbody>';
+  t.innerHTML = html;
+  card.style.display='block';
+}
+
+function describe(v){
+  const n=v.length;
+  const mean = v.reduce((a,b)=>a+b,0)/n;
+  const std = Math.sqrt(v.reduce((a,b)=>a+(b-mean)**2,0)/(n-1||1));
+  const sorted=[...v].sort((a,b)=>a-b);
+  const median = n%2 ? sorted[(n-1)/2] : (sorted[n/2-1]+sorted[n/2])/2;
+  return {n, mean, std, min:sorted[0], max:sorted[n-1], median};
+}
+
+function fmt(v){
+  if(v===null||v===undefined||v==='') return '<span style="color:#cbd5e1">—</span>';
+  if(typeof v==='number') return Number.isInteger(v)?v:v.toFixed(3);
+  return v;
+}
+
+function populateSelectors(){
+  const xs = document.getElementById('x-var');
+  const ys = document.getElementById('y-var');
+  const ry = document.getElementById('reg-y');
+  const rx = document.getElementById('reg-x');
+  [xs,ys,ry,rx].forEach(s=>s.innerHTML='');
+  state.cols.forEach(c=>{
+    [xs,ys].forEach(s=>s.insertAdjacentHTML('beforeend',`<option value="${c.name}">${c.name}</option>`));
+  });
+  state.numericCols.forEach(n=>{
+    ry.insertAdjacentHTML('beforeend',`<option value="${n}">${n}</option>`);
+    rx.insertAdjacentHTML('beforeend',`<option value="${n}">${n}</option>`);
+  });
+}
+
+function resetAll(){
+  state.rows=[]; state.cols=[]; state.numericCols=[]; state.lastReg=null;
+  document.getElementById('data-status').textContent='No dataset loaded';
+  ['preview-card','stats-card','reg-results-card'].forEach(id=>document.getElementById(id).style.display='none');
+  document.getElementById('chart-container').innerHTML='<div class="empty">Choose options and click <em>Generate Chart</em>.</div>';
+  document.getElementById('heatmap-host').style.display='none';
+  document.getElementById('tab-student').innerHTML='<div class="empty">Run a regression first.</div>';
+  document.getElementById('tab-academic').innerHTML='<div class="empty">Run a regression first.</div>';
+  document.getElementById('report-host').innerHTML='<div class="empty card">No report yet.</div>';
+  populateSelectors();
+  if(state.chart){state.chart.destroy();state.chart=null;}
+}
+
+/* =========================================================
+   VISUALIZATIONS
+   ========================================================= */
+function renderChart(){
+  if(!state.rows.length){ toast('Load a dataset first','err'); return; }
+  const type = document.getElementById('chart-type').value;
+  const xName = document.getElementById('x-var').value;
+  const yName = document.getElementById('y-var').value;
+  const host = document.getElementById('chart-container');
+  const hm = document.getElementById('heatmap-host');
+  hm.style.display='none';
+  if(state.chart){state.chart.destroy();state.chart=null;}
+
+  if(type==='heatmap'){ drawHeatmap(); return; }
+
+  host.innerHTML = '<canvas id="chart-canvas"></canvas>';
+  const ctx = document.getElementById('chart-canvas').getContext('2d');
+  const xVals = state.rows.map(r=>r[xName]);
+  const yVals = state.rows.map(r=>parseFloat(r[yName]));
+
+  const baseOpts = {
+    responsive:true, maintainAspectRatio:false,
+    plugins:{ legend:{position:'bottom'}, title:{display:true, text:`${type.toUpperCase()}: ${yName} vs ${xName}`, font:{size:14,weight:'600'}} },
+    scales:{ x:{title:{display:true,text:xName}}, y:{title:{display:true,text:yName}} }
+  };
+
+  if(type==='line'){
+    state.chart = new Chart(ctx,{type:'line',data:{labels:xVals,datasets:[{label:yName,data:yVals,borderColor:'#10b981',backgroundColor:'rgba(16,185,129,.15)',tension:.25,fill:true}]},options:baseOpts});
+  } else if(type==='bar'){
+    state.chart = new Chart(ctx,{type:'bar',data:{labels:xVals,datasets:[{label:yName,data:yVals,backgroundColor:'#0a2540'}]},options:baseOpts});
+  } else if(type==='scatter'){
+    const pts = state.rows.map(r=>({x:parseFloat(r[xName]),y:parseFloat(r[yName])})).filter(p=>!isNaN(p.x)&&!isNaN(p.y));
+    const lr = simpleLR(pts.map(p=>p.x), pts.map(p=>p.y));
+    const xs = pts.map(p=>p.x); const xmin=Math.min(...xs), xmax=Math.max(...xs);
+    const line=[{x:xmin,y:lr.a+lr.b*xmin},{x:xmax,y:lr.a+lr.b*xmax}];
+    state.chart = new Chart(ctx,{type:'scatter',data:{datasets:[
+      {label:'Observations',data:pts,backgroundColor:'#0a2540',pointRadius:4},
+      {label:`Fit (β=${lr.b.toFixed(3)}, R²=${lr.r2.toFixed(3)})`,data:line,type:'line',borderColor:'#10b981',backgroundColor:'transparent',pointRadius:0,borderWidth:2}
+    ]},options:baseOpts});
+  } else if(type==='hist'){
+    const v = yVals.filter(x=>!isNaN(x));
+    const bins=20; const min=Math.min(...v), max=Math.max(...v); const w=(max-min)/bins;
+    const counts=new Array(bins).fill(0); const labels=[];
+    for(let i=0;i<bins;i++) labels.push((min+i*w).toFixed(2));
+    v.forEach(x=>{ let i=Math.min(bins-1, Math.floor((x-min)/w)); counts[i]++; });
+    const o = {...baseOpts}; o.plugins.title.text = `Distribution of ${yName}`;
+    o.scales.x.title.text = yName; o.scales.y.title.text='Frequency';
+    state.chart = new Chart(ctx,{type:'bar',data:{labels,datasets:[{label:'Count',data:counts,backgroundColor:'#10b981'}]},options:o});
+  }
+}
+
+function simpleLR(x,y){
+  const n=x.length;
+  const mx=x.reduce((a,b)=>a+b,0)/n, my=y.reduce((a,b)=>a+b,0)/n;
+  let num=0,den=0;
+  for(let i=0;i<n;i++){ num+=(x[i]-mx)*(y[i]-my); den+=(x[i]-mx)**2; }
+  const b=num/den, a=my-b*mx;
+  let sst=0,ssr=0;
+  for(let i=0;i<n;i++){ sst+=(y[i]-my)**2; ssr+=(y[i]-(a+b*x[i]))**2; }
+  return {a,b,r2:1-ssr/sst};
+}
+
+function drawHeatmap(){
+  const host = document.getElementById('chart-container');
+  const hm = document.getElementById('heatmap-host');
+  host.innerHTML = '';
+  hm.style.display='flex';
+  const cols = state.numericCols;
+  if(cols.length<2){ host.innerHTML='<div class="empty">Need at least 2 numeric columns.</div>'; hm.style.display='none'; return; }
+  const M = cols.map(c1 => cols.map(c2 => pearson(state.rows.map(r=>parseFloat(r[c1])), state.rows.map(r=>parseFloat(r[c2])))));
+  const cell = 70, pad=110, size = cols.length*cell + pad + 30;
+  const canvas = document.createElement('canvas');
+  canvas.width = size; canvas.height = size;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle='#fff'; ctx.fillRect(0,0,size,size);
+  ctx.font='12px Inter'; ctx.fillStyle='#0a2540';
+  // labels
+  cols.forEach((c,i)=>{
+    ctx.save();
+    ctx.translate(pad+i*cell+cell/2, pad-8);
+    ctx.rotate(-Math.PI/4);
+    ctx.textAlign='left'; ctx.fillText(c,0,0);
+    ctx.restore();
+    ctx.textAlign='right'; ctx.textBaseline='middle';
+    ctx.fillText(c, pad-8, pad+i*cell+cell/2);
+  });
+  // cells
+  for(let i=0;i<cols.length;i++){
+    for(let j=0;j<cols.length;j++){
+      const v = M[i][j];
+      ctx.fillStyle = divergeColor(v);
+      ctx.fillRect(pad+j*cell, pad+i*cell, cell-2, cell-2);
+      ctx.fillStyle = Math.abs(v)>0.55?'#fff':'#0a2540';
+      ctx.font='600 13px Inter'; ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillText(v.toFixed(2), pad+j*cell+cell/2, pad+i*cell+cell/2);
+    }
+  }
+  hm.innerHTML=''; hm.appendChild(canvas);
+}
+function pearson(x,y){
+  const v = x.map((_,i)=>[x[i],y[i]]).filter(p=>!isNaN(p[0])&&!isNaN(p[1]));
+  const n=v.length;
+  const mx=v.reduce((a,p)=>a+p[0],0)/n, my=v.reduce((a,p)=>a+p[1],0)/n;
+  let num=0,dx=0,dy=0;
+  v.forEach(p=>{ num+=(p[0]-mx)*(p[1]-my); dx+=(p[0]-mx)**2; dy+=(p[1]-my)**2; });
+  return num/Math.sqrt(dx*dy);
+}
+function divergeColor(v){
+  // -1 blue, 0 white, +1 red
+  const t = (v+1)/2;
+  let r,g,b;
+  if(t<0.5){ const u=t/0.5; r=Math.round(59+(255-59)*u); g=Math.round(130+(255-130)*u); b=Math.round(246+(255-246)*u); }
+  else{ const u=(t-0.5)/0.5; r=255; g=Math.round(255-(255-59)*u); b=Math.round(255-(255-59)*u); }
+  return `rgb(${r},${g},${b})`;
+}
+
+/* =========================================================
+   OLS REGRESSION
+   ========================================================= */
+function runRegression(){
+  if(!state.rows.length){ toast('Load a dataset first','err'); return; }
+  const yName = document.getElementById('reg-y').value;
+  const xNames = Array.from(document.getElementById('reg-x').selectedOptions).map(o=>o.value);
+  if(!yName || !xNames.length){ toast('Select Y and at least one X','err'); return; }
+  if(xNames.includes(yName)){ toast('Y cannot also be an X','err'); return; }
+
+  const spin = document.getElementById('reg-spin');
+  spin.style.display='inline-block';
+
+  setTimeout(()=>{   // allow spinner paint
+    try{
+      const cleaned = state.rows
+        .map(r=>{
+          const row = {y: parseFloat(r[yName])};
+          xNames.forEach(x=> row[x] = parseFloat(r[x]));
+          return row;
+        })
+        .filter(r => !isNaN(r.y) && xNames.every(x=>!isNaN(r[x])));
+      const n = cleaned.length;
+      const k = xNames.length + 1;
+      if(n<=k){ throw new Error('Not enough observations after dropping NA'); }
+
+      const X = cleaned.map(r=>[1, ...xNames.map(x=>r[x])]);
+      const y = cleaned.map(r=>r.y);
+      const Xt = math.transpose(X);
+      const XtX = math.multiply(Xt, X);
+      const XtXinv = math.inv(XtX);
+      const Xty = math.multiply(Xt, y);
+      const beta = math.multiply(XtXinv, Xty);  // length k
+
+      const yhat = math.multiply(X, beta);
+      const resid = y.map((yi,i)=>yi - yhat[i]);
+      const ymean = y.reduce((a,b)=>a+b,0)/n;
+      const sst = y.reduce((a,b)=>a+(b-ymean)**2,0);
+      const ssr = resid.reduce((a,b)=>a+b*b,0);
+      const r2 = 1 - ssr/sst;
+      const adjR2 = 1 - (1-r2)*(n-1)/(n-k);
+      const sigma2 = ssr/(n-k);
+      const covBeta = math.multiply(XtXinv, sigma2);
+      const se = covBeta.map((row,i)=>Math.sqrt(row[i]));
+      const tstat = beta.map((b,i)=>b/se[i]);
+      const df = n-k;
+      const pvals = tstat.map(t => 2*(1 - tcdf(Math.abs(t), df)));
+      const F = (r2/(k-1)) / ((1-r2)/(n-k));
+      const Fp = 1 - fcdf(F, k-1, n-k);
+      const aic = n*Math.log(ssr/n) + 2*k;
+      const bic = n*Math.log(ssr/n) + k*Math.log(n);
+
+      const names = ['(Intercept)', ...xNames];
+      state.lastReg = {yName, xNames, n, k, df, beta, se, tstat, pvals, r2, adjR2, F, Fp, sigma2, ssr, sst, aic, bic, names, resid, yhat};
+
+      renderRegResults();
+      buildInterpretation();
+      toast('Regression complete.','ok');
+    }catch(e){
+      toast('Regression failed: '+e.message,'err');
+      console.error(e);
+    } finally {
+      spin.style.display='none';
+    }
+  }, 60);
+}
+
+function renderRegResults(){
+  const r = state.lastReg;
+  document.getElementById('reg-results-card').style.display='block';
+  document.getElementById('reg-spec').innerHTML =
+    `<b>${r.yName}</b> = β₀ + ` + r.xNames.map((x,i)=>`β${i+1}·${x}`).join(' + ') + ` + ε &nbsp;·&nbsp; n=${r.n}, df=${r.df}`;
+  let html = `<table class="reg-table"><thead><tr><th>Variable</th><th>Coefficient</th><th>Std. Error</th><th>t-stat</th><th>p-value</th><th>95% CI</th></tr></thead><tbody>`;
+  for(let i=0;i<r.beta.length;i++){
+    const stars = r.pvals[i]<0.01?'***':r.pvals[i]<0.05?'**':r.pvals[i]<0.10?'*':'';
+    const tcrit = 1.96; // ~95%
+    const lo = (r.beta[i]-tcrit*r.se[i]).toFixed(4);
+    const hi = (r.beta[i]+tcrit*r.se[i]).toFixed(4);
+    html += `<tr>
+      <td>${r.names[i]}</td>
+      <td>${r.beta[i].toFixed(4)} <span class="sig">${stars}</span></td>
+      <td>${r.se[i].toFixed(4)}</td>
+      <td>${r.tstat[i].toFixed(3)}</td>
+      <td>${r.pvals[i].toFixed(4)}</td>
+      <td>[${lo}, ${hi}]</td>
+    </tr>`;
+  }
+  html += `</tbody></table>`;
+  document.getElementById('reg-table-host').innerHTML = html;
+
+  document.getElementById('reg-summary').innerHTML = `
+    <div class="item"><div class="k">R²</div><div class="v">${r.r2.toFixed(4)}</div></div>
+    <div class="item"><div class="k">Adj. R²</div><div class="v">${r.adjR2.toFixed(4)}</div></div>
+    <div class="item"><div class="k">F-statistic</div><div class="v">${r.F.toFixed(3)}</div></div>
+    <div class="item"><div class="k">Prob (F)</div><div class="v">${r.Fp.toFixed(4)}</div></div>
+    <div class="item"><div class="k">Observations</div><div class="v">${r.n}</div></div>
+    <div class="item"><div class="k">σ̂</div><div class="v">${Math.sqrt(r.sigma2).toFixed(4)}</div></div>
+    <div class="item"><div class="k">AIC</div><div class="v">${r.aic.toFixed(2)}</div></div>
+    <div class="item"><div class="k">BIC</div><div class="v">${r.bic.toFixed(2)}</div></div>
+  `;
+}
+
+/* =========================================================
+   DISTRIBUTIONS — t and F CDFs
+   Using regularized incomplete beta function
+   ========================================================= */
+function tcdf(t, df){
+  // P(T <= t)
+  const x = df/(df+t*t);
+  const ib = betaInc(df/2, 0.5, x); // I_x(df/2, 1/2)
+  let p = 1 - 0.5*ib;
+  if(t<0) p = 1-p;
+  return p;
+}
+function fcdf(F, d1, d2){
+  if(F<=0) return 0;
+  const x = (d1*F)/(d1*F + d2);
+  return betaInc(d1/2, d2/2, x);
+}
+// regularized incomplete beta I_x(a,b)
+function betaInc(a,b,x){
+  if(x<=0) return 0; if(x>=1) return 1;
+  const lbeta = lgamma(a)+lgamma(b)-lgamma(a+b);
+  const front = Math.exp(Math.log(x)*a + Math.log(1-x)*b - lbeta) / a;
+  // continued fraction
+  const cf = betaCF(a,b,x);
+  // Use symmetry for faster convergence:
+  if(x < (a+1)/(a+b+2)) return front*cf;
+  return 1 - betaInc(b,a,1-x);
+}
+function betaCF(a,b,x){
+  const MAX=200, EPS=3e-14;
+  const qab=a+b, qap=a+1, qam=a-1;
+  let c=1, d=1 - qab*x/qap;
+  if(Math.abs(d)<1e-30) d=1e-30;
+  d=1/d; let h=d;
+  for(let m=1;m<=MAX;m++){
+    const m2=2*m;
+    let aa = m*(b-m)*x/((qam+m2)*(a+m2));
+    d = 1 + aa*d; if(Math.abs(d)<1e-30) d=1e-30;
+    c = 1 + aa/c; if(Math.abs(c)<1e-30) c=1e-30;
+    d=1/d; h *= d*c;
+    aa = -(a+m)*(qab+m)*x/((a+m2)*(qap+m2));
+    d = 1 + aa*d; if(Math.abs(d)<1e-30) d=1e-30;
+    c = 1 + aa/c; if(Math.abs(c)<1e-30) c=1e-30;
+    d=1/d; const del=d*c; h*=del;
+    if(Math.abs(del-1)<EPS) break;
+  }
+  return h;
+}
+function lgamma(z){
+  // Lanczos approximation
+  const g=7;
+  const c=[0.99999999999980993, 676.5203681218851, -1259.1392167224028,
+    771.32342877765313, -176.61502916214059, 12.507343278686905,
+    -0.13857109526572012, 9.9843695780195716e-6, 1.5056327351493116e-7];
+  if(z<0.5) return Math.log(Math.PI/Math.sin(Math.PI*z)) - lgamma(1-z);
+  z -= 1; let a=c[0]; const t=z+g+0.5;
+  for(let i=1;i<g+2;i++) a += c[i]/(z+i);
+  return 0.5*Math.log(2*Math.PI) + (z+0.5)*Math.log(t) - t + Math.log(a);
+}
+
+/* =========================================================
+   AI INTERPRETATION (template-based)
+   ========================================================= */
+function buildInterpretation(){
+  const r = state.lastReg;
+  if(!r) return;
+  const sig = r.names.map((n,i)=>({n,b:r.beta[i],p:r.pvals[i],t:r.tstat[i]})).slice(1)
+              .sort((a,b)=>a.p-b.p);
+  const fitQuality = r.r2>0.7?'strong':r.r2>0.4?'moderate':r.r2>0.15?'weak':'very weak';
+  const Fverdict = r.Fp<0.05 ? 'The joint F-test rejects the null that all slopes are zero (p &lt; 0.05), so at least one regressor is jointly informative about ' : 'The joint F-test does not reject the null that all slopes are zero, suggesting the regressors jointly have limited explanatory power for ';
+
+  // Student tone
+  let s = `<p>You modelled <b>${r.yName}</b> as a linear function of ${r.xNames.map(x=>`<b>${x}</b>`).join(', ')} using ${r.n} observations.</p>`;
+  s += `<p>The model explains <b>${(r.r2*100).toFixed(1)}%</b> of the variation in ${r.yName} (R² = ${r.r2.toFixed(3)}, adjusted R² = ${r.adjR2.toFixed(3)}). This is a <b>${fitQuality}</b> fit — meaning the X variables you picked do a ${fitQuality} job of predicting Y.</p>`;
+  s += `<p><b>What each variable says:</b></p><ul>`;
+  sig.forEach(v=>{
+    const dir = v.b>0?'increases':'decreases';
+    const verdict = v.p<0.01?'highly statistically significant':v.p<0.05?'statistically significant':v.p<0.10?'marginally significant':'<b>not</b> statistically significant';
+    s += `<li>A one-unit rise in <b>${v.n}</b> is associated with a ${Math.abs(v.b).toFixed(3)}-unit ${dir} in ${r.yName}. This effect is ${verdict} (p = ${v.p.toFixed(3)}).</li>`;
+  });
+  s += `</ul><p><b>Big-picture takeaway:</b> ${Fverdict}${r.yName}.</p>`;
+  s += `<p><i>Heads-up:</i> these are <u>associations</u>, not proven causes. Watch for omitted variables, reverse causality, and measurement error before drawing policy conclusions.</p>`;
+
+  // Academic tone
+  let a = `<p>We estimate the linear model<br><i>${r.yName}<sub>i</sub> = β₀ + ${r.xNames.map((x,i)=>`β<sub>${i+1}</sub>${x}<sub>i</sub>`).join(' + ')} + ε<sub>i</sub></i><br>by Ordinary Least Squares (OLS) on a sample of n = ${r.n} observations. Standard errors are reported under the classical assumption of homoskedastic, uncorrelated errors.</p>`;
+  a += `<p>The model attains R² = ${r.r2.toFixed(4)} (adjusted R² = ${r.adjR2.toFixed(4)}), and the joint significance test yields F(${r.k-1}, ${r.df}) = ${r.F.toFixed(3)} with p-value ${r.Fp.toFixed(4)}. We thus ${r.Fp<0.05?'reject':'fail to reject'} the null hypothesis that all slope coefficients are jointly zero at conventional levels.</p>`;
+  a += `<p>Coefficient estimates indicate that:</p><ul>`;
+  sig.forEach(v=>{
+    const verdict = v.p<0.01?'at the 1% level':v.p<0.05?'at the 5% level':v.p<0.10?'at the 10% level':'and is not statistically distinguishable from zero at conventional levels';
+    const word = v.p<0.10 ? `statistically significant ${verdict}` : verdict;
+    a += `<li>The point estimate on <i>${v.n}</i> is ${v.b.toFixed(4)} (SE = ${r.se[r.names.indexOf(v.n)].toFixed(4)}, t = ${v.t.toFixed(2)}), ${word}.</li>`;
+  });
+  a += `</ul><p>Conditional on the validity of the OLS assumptions (linearity, exogeneity, no perfect multicollinearity, homoskedasticity, and no autocorrelation), these estimates are BLUE. Diagnostic checks for heteroskedasticity (e.g., Breusch–Pagan, White) and—where applicable—autocorrelation (Durbin–Watson, Breusch–Godfrey) are recommended before drawing inferential conclusions.</p>`;
+
+  document.getElementById('tab-student').innerHTML = s;
+  document.getElementById('tab-academic').innerHTML = a;
+}
+
+/* =========================================================
+   REPORT GENERATOR
+   ========================================================= */
+function generateReport(){
+  if(!state.lastReg){ toast('Run a regression first','err'); return; }
+  const r = state.lastReg;
+  const today = new Date().toLocaleDateString(undefined,{year:'numeric',month:'long',day:'numeric'});
+
+  const title = `An Empirical Analysis of ${r.yName}: Evidence from ${r.xNames.join(', ')}`;
+  const sig = r.names.map((n,i)=>({n,b:r.beta[i],p:r.pvals[i],t:r.tstat[i],se:r.se[i]})).slice(1);
+  const topSig = sig.filter(v=>v.p<0.05);
+
+  // Abstract (~200 words)
+  const abstract =
+    `This paper investigates the empirical relationship between ${r.yName} and a set of ${r.k-1} explanatory variables (${r.xNames.join(', ')}) using a sample of ${r.n} observations. We estimate a linear specification by Ordinary Least Squares, computing coefficients via the closed-form expression β = (X'X)⁻¹X'y and conducting inference under classical assumptions. The model attains an R² of ${r.r2.toFixed(3)} and an adjusted R² of ${r.adjR2.toFixed(3)}, with the joint F-test yielding F(${r.k-1}, ${r.df}) = ${r.F.toFixed(2)} (p = ${r.Fp.toFixed(4)}). ${topSig.length>0?`We find that ${topSig.map(v=>`${v.n} is ${v.b>0?'positively':'negatively'} and statistically significantly associated with ${r.yName}`).join('; ')}.`:'No individual regressor reaches statistical significance at the 5% level.'} The estimated magnitudes are interpreted in light of the relevant economic theory, and a battery of regression diagnostics is presented. The results contribute to the empirical literature on the determinants of ${r.yName} and suggest several avenues for further research, including the use of richer specifications, robust standard errors, and instrumental-variable strategies to address potential endogeneity.`;
+
+  // Methodology equation
+  const eq = `${r.yName}<sub>i</sub> = β<sub>0</sub> + ` +
+    r.xNames.map((x,i)=>`β<sub>${i+1}</sub>·${x}<sub>i</sub>`).join(' + ') + ` + ε<sub>i</sub>`;
+
+  // Data description table
+  const num = state.cols.filter(c=>c.type==='numeric' && (c.name===r.yName || r.xNames.includes(c.name)));
+  let dataTable = `<table><thead><tr><th>Variable</th><th>N</th><th>Mean</th><th>Std</th><th>Min</th><th>Max</th></tr></thead><tbody>`;
+  num.forEach(c=>{
+    const v = c.values.map(x=>parseFloat(x)).filter(x=>!isNaN(x));
+    const s = describe(v);
+    dataTable += `<tr><td>${c.name}</td><td>${v.length}</td><td>${s.mean.toFixed(3)}</td><td>${s.std.toFixed(3)}</td><td>${s.min.toFixed(3)}</td><td>${s.max.toFixed(3)}</td></tr>`;
+  });
+  dataTable += `</tbody></table>`;
+
+  // Results table (compact)
+  let resultsTable = `<table><thead><tr><th>Variable</th><th>Coef.</th><th>SE</th><th>t</th><th>p</th></tr></thead><tbody>`;
+  for(let i=0;i<r.beta.length;i++){
+    const stars = r.pvals[i]<0.01?'***':r.pvals[i]<0.05?'**':r.pvals[i]<0.10?'*':'';
+    resultsTable += `<tr><td>${r.names[i]}</td><td>${r.beta[i].toFixed(4)}${stars}</td><td>${r.se[i].toFixed(4)}</td><td>${r.tstat[i].toFixed(3)}</td><td>${r.pvals[i].toFixed(4)}</td></tr>`;
+  }
+  resultsTable += `<tr><td colspan="5" style="border-top:1px solid #0f172a;padding-top:8px"><b>R² = ${r.r2.toFixed(4)} · Adj R² = ${r.adjR2.toFixed(4)} · F(${r.k-1},${r.df}) = ${r.F.toFixed(2)} · n = ${r.n}</b></td></tr>`;
+  resultsTable += `</tbody></table>`;
+
+  // Diagnostics
+  const meanRes = r.resid.reduce((a,b)=>a+b,0)/r.n;
+  const sdRes = Math.sqrt(r.resid.reduce((a,b)=>a+(b-meanRes)**2,0)/(r.n-1));
+  // Crude heteroskedasticity heuristic — correlation between |resid| and yhat
+  const absR = r.resid.map(x=>Math.abs(x));
+  const hetCorr = pearson(absR, r.yhat);
+  const hetVerdict = Math.abs(hetCorr)>0.3 ? 'a non-trivial' : 'no strong';
+
+  const html = `
+  <div class="card report-wrap" id="report-wrap">
+    <h1 class="title">${title}</h1>
+    <div class="authors">Generated by Econ Research Co-Pilot · ${today}</div>
+
+    <div class="abstract"><b>Abstract.</b> ${abstract}</div>
+
+    <h2 class="sec">1. Introduction</h2>
+    <p>Understanding the determinants of <i>${r.yName}</i> is of central interest in both academic and policy circles. A substantial body of research has examined how variables such as ${r.xNames.join(', ')} interact with ${r.yName}, often with mixed empirical findings. This paper revisits these relationships using a clean, transparent specification estimated by Ordinary Least Squares (OLS). By presenting the full regression diagnostics alongside the coefficient estimates, we aim to provide a comprehensive picture of both the empirical findings and the limitations that accompany them.</p>
+
+    <h2 class="sec">2. Data Description</h2>
+    <p>The dataset contains <b>${state.rows.length}</b> observations and <b>${state.cols.length}</b> variables, of which ${num.length} are used in the present analysis. Table 1 reports the descriptive statistics for each variable employed in the regression.</p>
+    <p style="text-align:center;font-style:italic">Table 1. Descriptive statistics.</p>
+    ${dataTable}
+
+    <h2 class="sec">3. Methodology</h2>
+    <p>We estimate the following linear model by OLS:</p>
+    <div class="eq">${eq}</div>
+    <p>Estimation proceeds via the closed-form solution <i>β̂ = (X'X)⁻¹X'y</i>, where X is the n × k design matrix including a column of ones for the intercept. Under the Gauss–Markov assumptions — linearity, strict exogeneity, no perfect multicollinearity, homoskedasticity, and no autocorrelation of the disturbances — the OLS estimator is the best linear unbiased estimator (BLUE). Standard errors are computed from <i>σ̂²(X'X)⁻¹</i>, with σ̂² = SSR/(n − k). Inference on individual coefficients uses Student-t statistics with n − k degrees of freedom; the overall significance of the regression is assessed via the standard F-statistic.</p>
+
+    <h2 class="sec">4. Results</h2>
+    <p>Table 2 reports the estimated coefficients along with their standard errors, t-statistics, and p-values. Asterisks denote conventional significance levels (*** p&lt;0.01, ** p&lt;0.05, * p&lt;0.10).</p>
+    <p style="text-align:center;font-style:italic">Table 2. OLS estimates. Dependent variable: ${r.yName}.</p>
+    ${resultsTable}
+    <p>The model accounts for ${(r.r2*100).toFixed(1)}% of the variation in ${r.yName}. ${topSig.length>0 ? `Among the regressors, ${topSig.map(v=>`<i>${v.n}</i> enters with a ${v.b>0?'positive':'negative'} and statistically significant coefficient (β̂ = ${v.b.toFixed(3)}, p = ${v.p.toFixed(3)})`).join('; ')}.` : `None of the individual regressors reaches the 5% level of significance.`} The joint F-test ${r.Fp<0.05?'rejects':'does not reject'} the null hypothesis that all slope coefficients are simultaneously zero (F = ${r.F.toFixed(2)}, p = ${r.Fp.toFixed(4)}).</p>
+
+    <h2 class="sec">5. Diagnostics</h2>
+    <p>The OLS residuals have mean ${meanRes.toFixed(4)} and standard deviation ${sdRes.toFixed(4)}, consistent with the implicit normalization in the least-squares fit. The Pearson correlation between |ε̂| and the fitted values is ${hetCorr.toFixed(3)}, suggesting <b>${hetVerdict}</b> evidence of heteroskedasticity in this specification; a formal Breusch–Pagan or White test is recommended for confirmation. Further diagnostics — including tests for autocorrelation (Durbin–Watson, Breusch–Godfrey), specification error (RESET), and structural breaks (Chow) — would strengthen the empirical conclusions.</p>
+
+    <h2 class="sec">6. Limitations</h2>
+    <p>Several caveats deserve emphasis. First, OLS estimates the conditional expectation function and recovers <i>causal</i> effects only under the strong assumption of exogeneity of the regressors. Omitted variables, simultaneity, and measurement error may bias the coefficients. Second, the classical standard errors reported here assume homoskedasticity; if this assumption is violated, heteroskedasticity-robust (Huber–White) standard errors should be used. Third, the sample size (n = ${r.n}) constrains statistical power and may limit the external validity of the findings. Future work should consider richer specifications, robust and clustered inference, and instrumental-variable strategies where credible instruments are available.</p>
+
+    <h2 class="sec">7. References</h2>
+    <div class="refs">
+      <p>Greene, W. H. (2018). <i>Econometric Analysis</i> (8th ed.). Pearson.</p>
+      <p>Stock, J. H., &amp; Watson, M. W. (2020). <i>Introduction to Econometrics</i> (4th ed.). Pearson.</p>
+      <p>Wooldridge, J. M. (2019). <i>Introductory Econometrics: A Modern Approach</i> (7th ed.). Cengage.</p>
+      <p>White, H. (1980). A heteroskedasticity-consistent covariance matrix estimator and a direct test for heteroskedasticity. <i>Econometrica</i>, 48(4), 817–838.</p>
+      <p>Breusch, T. S., &amp; Pagan, A. R. (1979). A simple test for heteroscedasticity and random coefficient variation. <i>Econometrica</i>, 47(5), 1287–1294.</p>
+    </div>
+  </div>`;
+
+  document.getElementById('report-host').innerHTML = html;
+  toast('Report generated.','ok');
+}
+
+/* =========================================================
+   EXPORT PDF
+   ========================================================= */
+async function exportPDF(){
+  const el = document.getElementById('report-wrap');
+  if(!el){ toast('Generate the report first','err'); return; }
+  toast('Rendering PDF…','ok');
+  const canvas = await html2canvas(el,{scale:2, backgroundColor:'#fff'});
+  const img = canvas.toDataURL('image/png');
+  const { jsPDF } = window.jspdf;
+  const pdf = new jsPDF('p','mm','a4');
+  const pw = pdf.internal.pageSize.getWidth();
+  const ph = pdf.internal.pageSize.getHeight();
+  const ratio = canvas.width/canvas.height;
+  const w = pw - 20;
+  const h = w/ratio;
+  let y = 10;
+  if(h <= ph - 20){
+    pdf.addImage(img,'PNG',10,10,w,h);
+  } else {
+    // multi-page: slice canvas
+    const pageHeightPx = canvas.width * ( (ph-20)/(pw-20) );
+    let remaining = canvas.height;
+    let sY = 0;
+    while(remaining > 0){
+      const sliceH = Math.min(pageHeightPx, remaining);
+      const tmp = document.createElement('canvas');
+      tmp.width = canvas.width; tmp.height = sliceH;
+      tmp.getContext('2d').drawImage(canvas, 0, sY, canvas.width, sliceH, 0, 0, canvas.width, sliceH);
+      const sImg = tmp.toDataURL('image/png');
+      const sH = (sliceH/canvas.width)*w;
+      pdf.addImage(sImg,'PNG',10,10,w,sH);
+      remaining -= sliceH; sY += sliceH;
+      if(remaining>0) pdf.addPage();
+    }
+  }
+  pdf.save('Econ_Research_Report.pdf');
+  toast('PDF exported.','ok');
+}
+</script>
+</body>
+</html>  give me the link 
